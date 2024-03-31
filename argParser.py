@@ -15,10 +15,13 @@ def get_arg_parser():
                                 'all'],
                         default=['all'], required=False, dest='models',
                         help='which models to run')
+    parser.add_argument('-c', '--clear', help="Clear huggingface cache", required=False, 
+                        action=argparse.BooleanOptionalAction, default=False)
     
     return parser
 
 def parse_args(args):
+    args = args[1:]
     parser = get_arg_parser()
     parsed_args = parser.parse_args(args)
 
@@ -44,10 +47,11 @@ def parse_args(args):
     if 'mlp' in parsed_args.models or 'multi-layered perceptron' in parsed_args.models:
         models['svm'] = True
     
-    return models
+    return models, parsed_args.clear
     
 if __name__ == '__main__':
-    models = parse_args(sys.argv[1:])
+    models, clear = parse_args(sys.argv)
 
     print(models)
+    print(clear)
 
