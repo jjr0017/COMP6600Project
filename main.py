@@ -15,7 +15,9 @@ celeb_training_dataset, celeb_training_targets = loadDataset.load_training_datas
 celeb_testing_dataset, celeb_testing_targets = loadDataset.load_testing_dataset()
 
 # Train Models
-sklearn.
+dt = tree.DecisionTreeClassifier()
+dt.fit(celeb_training_dataset, celeb_training_targets)
+tree.plot_tree(dt)
 
 
 # Validation of Models
