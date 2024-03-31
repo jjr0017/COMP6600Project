@@ -1,1 +1,7 @@
 __pycache__/
+training_dataset.pickle
+training_targets.pickle
+testing_dataset.pickle
+testing_targets.pickle
+validation_dataset.pickle
+validation_targets.pickle
