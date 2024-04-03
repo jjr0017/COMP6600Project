@@ -45,7 +45,7 @@ def parse_args(args):
     if 'svm' in parsed_args.models or 'support vector machine' in parsed_args.models:
         models['svm'] = True
     if 'mlp' in parsed_args.models or 'multi-layered perceptron' in parsed_args.models:
-        models['svm'] = True
+        models['mlp'] = True
     
     return models, parsed_args.clear
     

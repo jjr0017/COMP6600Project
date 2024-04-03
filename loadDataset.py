@@ -6,20 +6,28 @@ import pickle
 import os
 import shutil
 
+NUM_TRAINING_SAMPLES = 10000
+NUM_TESTING_SAMPLES = 1000
+NUM_VALIDATION_SAMPLES = 1000
+
 def get_data_shard_as_np_array(ds, num_shards, index):
 
-    training_dataset =ds.shard(num_shards=1000, index=0)['image']
+    training_dataset =ds.shard(num_shards=num_shards, index=index)['image']
     x = np.zeros((len(training_dataset), 178*218*3))
     for i in range(len(training_dataset)):
         x[i] = np.array(training_dataset[i]).flatten()
 
-    training_targets = ds.shard(num_shards=1000, index=0).select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    y = np.zeros((len(training_targets), 4))
-    for i in range(4):
-        y[i][0] = training_dataset['Black_Hair'][i]
-        y[i][1] = training_dataset['Blond_Hair'][i]
-        y[i][2] = training_dataset['Brown_Hair'][i]
-        y[i][3] = training_dataset['Gray_Hair'][i]
+    training_targets = ds.shard(num_shards=num_shards, index=index).select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    y = ['None' for _ in range(len(training_targets))]
+    for i in range(len(training_targets)):
+        if int(training_targets['Black_Hair'][i]) == 1:
+            y[i] = 'Black_Hair'
+        if int(training_targets['Blond_Hair'][i]) == 1:
+            y[i] = 'Blond_Hair'
+        if int(training_targets['Brown_Hair'][i]) == 1:
+            y[i] = 'Brown_Hair'
+        if int(training_targets['Gray_Hair'][i]) == 1:
+            y[i] = 'Gray_Hair'
     return x, y
 
 # def configure_dataset(celeb_dataset):
@@ -57,6 +65,8 @@ def load_training_dataset():
             # targets = pickle.load(handle)
     # else:
     celeb_dataset = datasets.load_dataset("tpremoli/CelebA-attrs", split="train")
+    if NUM_TRAINING_SAMPLES is not None:
+        celeb_dataset = celeb_dataset.shuffle(seed=1856).select(range(NUM_TRAINING_SAMPLES))
 
     # celeb_dataset = configure_dataset(celeb_dataset)
 
@@ -83,6 +93,8 @@ def load_testing_dataset():
             # targets = pickle.load(handle)
     # else:
     celeb_dataset = datasets.load_dataset("tpremoli/CelebA-attrs", split="test")
+    if NUM_TESTING_SAMPLES is not None:
+        celeb_dataset = celeb_dataset.shuffle(seed=1856).select(range(NUM_TESTING_SAMPLES))
 
     # celeb_dataset = configure_dataset(celeb_dataset)
 
@@ -109,6 +121,8 @@ def load_validation_dataset():
             # targets = pickle.load(handle)
     # else:
     celeb_dataset = datasets.load_dataset("tpremoli/CelebA-attrs", split="validation")
+    if NUM_VALIDATION_SAMPLES is not None:
+        celeb_dataset = celeb_dataset.shuffle(seed=1856).select(range(NUM_VALIDATION_SAMPLES))
 
     # celeb_dataset = configure_dataset(celeb_dataset)
 
