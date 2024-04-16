@@ -7,27 +7,59 @@ import os
 import shutil
 
 NUM_TRAINING_SAMPLES = 10000
-NUM_TESTING_SAMPLES = 1000
-NUM_VALIDATION_SAMPLES = 1000
+NUM_TESTING_SAMPLES = 2000
+NUM_VALIDATION_SAMPLES = 2000
+
+def count_occurences(l, element):
+    count = 0
+    for ele in l:
+        if ele == element:
+            count += 1
+
+    return count
+
+def clean_dataset(x, y):
+    y = np.array(y)
+    if len(x) != len(y):
+        raise("x not equal to y in clean_dataset")
+    
+    idx_mask = np.ones(len(x), dtype=bool)
+    for i in range(len(x)):
+        if np.max(x[i]) > 255 or np.min(x[i]) < 0:
+            idx_mask[i] = False
+        
+        if y[i] == 'None':
+            idx_mask[i] = False
+    
+    x = x[idx_mask, ...]
+    y = y[idx_mask, ...]
+
+    return x, y
+
+def configure_dataset(ds, targets):
+    x = np.zeros((len(ds), 178*218*3))
+    for i in range(len(ds)):
+        x[i] = np.array(ds[i]).flatten()
+    y = ['None' for _ in range(len(targets))]
+    for i in range(len(targets)):
+        if int(targets['Black_Hair'][i]) == 1:
+            y[i] = 'Black_Hair'
+        if int(targets['Blond_Hair'][i]) == 1:
+            y[i] = 'Blond_Hair'
+        if int(targets['Brown_Hair'][i]) == 1:
+            y[i] = 'Brown_Hair'
+        if int(targets['Gray_Hair'][i]) == 1:
+            y[i] = 'Gray_Hair'
+
+    x, y = clean_dataset(x, y)
+    return x, y
 
 def get_data_shard_as_np_array(ds, num_shards, index):
 
     training_dataset =ds.shard(num_shards=num_shards, index=index)['image']
-    x = np.zeros((len(training_dataset), 178*218*3))
-    for i in range(len(training_dataset)):
-        x[i] = np.array(training_dataset[i]).flatten()
 
     training_targets = ds.shard(num_shards=num_shards, index=index).select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    y = ['None' for _ in range(len(training_targets))]
-    for i in range(len(training_targets)):
-        if int(training_targets['Black_Hair'][i]) == 1:
-            y[i] = 'Black_Hair'
-        if int(training_targets['Blond_Hair'][i]) == 1:
-            y[i] = 'Blond_Hair'
-        if int(training_targets['Brown_Hair'][i]) == 1:
-            y[i] = 'Brown_Hair'
-        if int(training_targets['Gray_Hair'][i]) == 1:
-            y[i] = 'Gray_Hair'
+    x, y = configure_dataset(training_dataset, training_targets)
     return x, y
 
 # def configure_dataset(celeb_dataset):
@@ -65,6 +97,13 @@ def load_training_dataset():
             # targets = pickle.load(handle)
     # else:
     celeb_dataset = datasets.load_dataset("tpremoli/CelebA-attrs", split="train")
+    # idx_with_data = np.zeros(len(celeb_dataset))
+    # for row in range(len(celeb_dataset)):
+    #     if row % 1000 == 0:
+    #         print(row, "/", len(celeb_dataset))
+    #     if int(celeb_dataset['Black_Hair'][row]) == 1 or int(celeb_dataset['Blond_Hair'][row]) == 1 or int(celeb_dataset['Brown_Hair'][row]) == 1 or int(celeb_dataset['Gray_Hair'][row]) == 1:
+    #         idx_with_data[row] = 1
+    # print(np.sum(idx_with_data))
     if NUM_TRAINING_SAMPLES is not None:
         celeb_dataset = celeb_dataset.shuffle(seed=1856).select(range(NUM_TRAINING_SAMPLES))
 

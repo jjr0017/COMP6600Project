@@ -11,8 +11,9 @@ from sklearn.neural_network import MLPClassifier
 
 import argParser
 import loadDataset
+import modelEvaluation
 
-INCREMENT = 1000
+INCREMENT = 100
 
 models, clear = argParser.parse_args(sys.argv)
 
@@ -30,23 +31,26 @@ if models['dt']:
     dt = DecisionTreeClassifier()
     # dt = RandomForestClassifier(warm_start=True, n_estimators=1000)
 
-    for idx in tqdm(range(INCREMENT)):
-        x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        dt.fit(x, y)
-    x, y = loadDataset.get_data_shard_as_np_array(celeb_testing_dataset, 20000, 0)
+    # for idx in tqdm(range(INCREMENT)):
+        # x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
+        # dt.fit(x, y)
+    x, y = loadDataset.configure_dataset(celeb_training_dataset['image'], celeb_training_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
+    dt.fit(x, y)
+    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = dt.predict(x)
-    print(y_predicted)
+    modelEvaluation.evaluate_model('dt', y, y_predicted)
 
 if models['nb']:
     print("Training Naive Bayes model...")
-    nb = CategoricalNB()
+    nb = CategoricalNB(min_categories=256)
     idx = 0
     for idx in tqdm(range(INCREMENT)):
         x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        nb.partial_fit(x, y, ['None', 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    x, y = loadDataset.get_data_shard_as_np_array(celeb_testing_dataset, 20000, 0)
+        # print(loadDataset.count_occurences(y, 'None'), '/', len(y), 'are not classified')
+        nb.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = nb.predict(x)
-    print(y_predicted)
+    modelEvaluation.evaluate_model('nb', y, y_predicted)
 
 if models['lr']:
     print("Training Linear Regression model...")
@@ -54,21 +58,23 @@ if models['lr']:
     idx = 0
     for idx in tqdm(range(INCREMENT)):
         x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        lr.partial_fit(x, y, ['None', 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    x, y = loadDataset.get_data_shard_as_np_array(celeb_testing_dataset, 20000, 0)
+        lr.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = lr.predict(x)
-    print(y_predicted)
+    modelEvaluation.evaluate_model('lr', y, y_predicted)
 
 if models['svm']:
     print("Training Support Vector Machine model...")
-    svm = SGDClassifier(loss='log') # should SGDClassifier be used here?
+    svm = SVC() # should SGDClassifier be used here?
     idx = 0
-    for idx in tqdm(range(INCREMENT)):
-        x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        svm.partial_fit(x, y, ['None', 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    x, y = loadDataset.get_data_shard_as_np_array(celeb_testing_dataset, 20000, 0)
+    # for idx in tqdm(range(INCREMENT)):
+    #     x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
+    #     svm.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    x, y = loadDataset.configure_dataset(celeb_training_dataset['image'], celeb_training_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
+    svm.fit(x, y)
+    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = svm.predict(x)
-    print(y_predicted)
+    modelEvaluation.evaluate_model('svm', y, y_predicted)
 
 if models['mlp']:
     print("Training Multi-layered Perceptron model...")
@@ -76,10 +82,10 @@ if models['mlp']:
     idx = 0
     for idx in tqdm(range(INCREMENT)):
         x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        mlp.partial_fit(x, y, ['None', 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    x, y = loadDataset.get_data_shard_as_np_array(celeb_testing_dataset, 20000, 0)
+        mlp.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = mlp.predict(x)
-    print(y_predicted)
+    modelEvaluation.evaluate_model('mlp', y, y_predicted)
 
 # Validation of Models
 
