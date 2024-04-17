@@ -5,3 +5,4 @@ testing_dataset.pickle
 testing_targets.pickle
 validation_dataset.pickle
 validation_targets.pickle
+*.png
