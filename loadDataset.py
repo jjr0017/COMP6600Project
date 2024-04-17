@@ -10,6 +10,20 @@ NUM_TRAINING_SAMPLES = 10000
 NUM_TESTING_SAMPLES = 2000
 NUM_VALIDATION_SAMPLES = 2000
 
+def labels_to_matrix(y):
+    y_mat = np.zeros((len(y), 4))
+    for i, y in enumerate(y):
+        if y == 'Black_Hair':
+            y_mat[i, 0] = 1
+        elif y == 'Blond_Hair':
+            y_mat[i, 1] = 1
+        elif y == 'Brown_Hair':
+            y_mat[i, 2] = 1
+        elif y == 'Gray_Hair':
+            y_mat[i, 3] = 1
+    
+    return y_mat
+
 def count_occurences(l, element):
     count = 0
     for ele in l:

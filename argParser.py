@@ -17,7 +17,9 @@ def get_arg_parser():
                         help='which models to run')
     parser.add_argument('-c', '--clear', help="Clear huggingface cache", required=False, 
                         action=argparse.BooleanOptionalAction, default=False)
-    
+    parser.add_argument('-l', '--loss-curve', help="Plot loss curve if possible", required=False,
+                        default=False, action=argparse.BooleanOptionalAction)
+
     return parser
 
 def parse_args(args):
@@ -47,10 +49,10 @@ def parse_args(args):
     if 'mlp' in parsed_args.models or 'multi-layered perceptron' in parsed_args.models:
         models['mlp'] = True
     
-    return models, parsed_args.clear
+    return models, parsed_args.clear, parsed_args.loss_curve
     
 if __name__ == '__main__':
-    models, clear = parse_args(sys.argv)
+    models, clear, loss_curve = parse_args(sys.argv)
 
     print(models)
     print(clear)
