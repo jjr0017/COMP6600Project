@@ -14,11 +14,11 @@ import argParser
 import loadDataset
 import modelEvaluation
 
-INCREMENT = 100
+INCREMENT = 1000
 
 models, clear, gen_loss_curve = argParser.parse_args(sys.argv)
 
-models_used = []
+models_used = {}
 
 if clear:
     loadDataset.clear_cache()
@@ -27,6 +27,7 @@ if clear:
 
 celeb_training_dataset = loadDataset.load_training_dataset()
 celeb_testing_dataset = loadDataset.load_testing_dataset()
+celeb_validation_dataset = loadDataset.load_validation_dataset()
 
 # baseline model
 x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
@@ -48,22 +49,17 @@ modelEvaluation.evaluate_model('baseline', y, y_predicted)
 # Train Models
 if models['dt']:
     print("Training Decision Tree model...")
-    dt = DecisionTreeClassifier()
-    # dt = RandomForestClassifier(warm_start=True, n_estimators=1000)
-
-    # for idx in tqdm(range(INCREMENT)):
-        # x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-        # dt.fit(x, y)
+    dt = DecisionTreeClassifier(max_depth=None, min_samples_split=2)
     x, y = loadDataset.configure_dataset(celeb_training_dataset['image'], celeb_training_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     dt.fit(x, y)
     x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = dt.predict(x)
     modelEvaluation.evaluate_model('dt', y, y_predicted)
-    # models_used.append(dt)
+    models_used['dt'] = dt
 
 if models['nb']:
     print("Training Naive Bayes model...")
-    nb = CategoricalNB(min_categories=256)
+    nb = CategoricalNB(min_categories=256, class_prior=None)
     loss = None
     if gen_loss_curve:
         loss = np.zeros((2, INCREMENT))
@@ -80,11 +76,11 @@ if models['nb']:
             loss[1, idx] = sklearn.metrics.log_loss(y_test, loadDataset.labels_to_matrix(y_predicted_loss))
     y_predicted = nb.predict(x_test)
     modelEvaluation.evaluate_model('nb', y_test, y_predicted, loss)
-    # models_used.append(nb)
+    models_used['nb'] = nb
 
 if models['lr']:
     print("Training Linear Regression model...")
-    lr = SGDClassifier(max_iter = 500, tol = 1e-3, penalty = None, eta0 = 0.1)
+    lr = SGDClassifier(max_iter = 1000, tol = 1e-3, penalty = None, eta0 = 0.1, loss='hinge')
     loss = None
     if gen_loss_curve:
         loss = np.zeros((2, INCREMENT))
@@ -101,37 +97,42 @@ if models['lr']:
             loss[1, idx] = sklearn.metrics.log_loss(y_test, loadDataset.labels_to_matrix(y_predicted_loss))
     y_predicted = lr.predict(x_test)
     modelEvaluation.evaluate_model('lr', y_test, y_predicted, loss)
+    models_used['lr'] = lr
 
 if models['svm']:
     print("Training Support Vector Machine model...")
-    svm = SVC() # should SGDClassifier be used here?
-    idx = 0
-    # for idx in tqdm(range(INCREMENT)):
-    #     x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
-    #     svm.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
+    svm = SVC(max_iter=100000, tol=0.0001)
     x, y = loadDataset.configure_dataset(celeb_training_dataset['image'], celeb_training_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     svm.fit(x, y)
     x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
     y_predicted = svm.predict(x)
     modelEvaluation.evaluate_model('svm', y, y_predicted)
-    # models_used.append(svm)
+    models_used['svm'] = svm
 
 if models['mlp']:
     print("Training Multi-layered Perceptron model...")
-    mlp = MLPClassifier()
-    idx = 0
+    mlp = MLPClassifier(hidden_layer_sizes=[1000, 1000, 1000, 1000], activation='relu', max_iter=1000, tol=0.00001, alpha=0.001)
+    loss = None
+    if gen_loss_curve:
+        loss = np.zeros((2, INCREMENT))
+    x_test, y_test = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
+    samples = 0
     for idx in tqdm(range(INCREMENT)):
         x, y = loadDataset.get_data_shard_as_np_array(celeb_training_dataset, INCREMENT, idx)
+        # print(loadDataset.count_occurences(y, 'None'), '/', len(y), 'are not classified')
         mlp.partial_fit(x, y, ['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair'])
-    x, y = loadDataset.configure_dataset(celeb_testing_dataset['image'], celeb_testing_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
-    y_predicted = mlp.predict(x)
-    modelEvaluation.evaluate_model('mlp', y, y_predicted, mlp)
-    # models_used.append(mlp)
+        samples += len(x)
+        if gen_loss_curve:
+            y_predicted_loss = mlp.predict(x_test)
+            loss[0, idx] = samples
+            loss[1, idx] = sklearn.metrics.log_loss(y_test, loadDataset.labels_to_matrix(y_predicted_loss))
+    y_predicted = mlp.predict(x_test)
+    modelEvaluation.evaluate_model('mlp', y_test, y_predicted, loss)
+    models_used['mlp'] = mlp
 
 # Validation of Models
-
-# models_used = [DecisionTreeClassifier(), CategoricalNB(min_categories=256), SGDClassifier(max_iter = 500, tol = 1e-3, penalty = None, eta0 = 0.1), SVC(), MLPClassifier()]
-# x, y = loadDataset.configure_dataset(celeb_training_dataset['image'], celeb_training_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
-# modelEvaluation.plot_model_learning_curves(models_used, x, y)
-
-# Metrics
+print("Model Validation")
+x_validate, y_validate = loadDataset.configure_dataset(celeb_validation_dataset['image'], celeb_validation_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
+for m in models_used.keys():
+    y_predicted_validation = models_used[m].predict(x_validate)
+    modelEvaluation.evaluate_model(m+'_validation', y_validate, y_predicted_validation)
