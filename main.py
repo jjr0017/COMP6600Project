@@ -59,7 +59,7 @@ if models['dt']:
 
 if models['nb']:
     print("Training Naive Bayes model...")
-    nb = CategoricalNB(min_categories=256, class_prior=None)
+    nb = CategoricalNB(min_categories=256, alpha=1.0)
     loss = None
     if gen_loss_curve:
         loss = np.zeros((2, INCREMENT))
@@ -111,7 +111,7 @@ if models['svm']:
 
 if models['mlp']:
     print("Training Multi-layered Perceptron model...")
-    mlp = MLPClassifier(hidden_layer_sizes=[1000, 1000, 1000, 1000], activation='relu', max_iter=1000, tol=0.00001, alpha=0.001)
+    mlp = MLPClassifier(hidden_layer_sizes=[1000, 1000, 1000, 1000, 1000, 1000, 1000], activation='relu', max_iter=100000, tol=0.0001, alpha=0.5)
     loss = None
     if gen_loss_curve:
         loss = np.zeros((2, INCREMENT))
@@ -132,7 +132,21 @@ if models['mlp']:
 
 # Validation of Models
 print("Model Validation")
+
 x_validate, y_validate = loadDataset.configure_dataset(celeb_validation_dataset['image'], celeb_validation_dataset.select_columns(['Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair']))
+y_predicted = [None for _ in range(len(y_validate))]
+for i in range(len(y_validate)):
+    rand = np.random.randint(1, 5)
+    if rand == 1:
+        y_predicted[i] = 'Black_Hair'
+    elif rand == 2:
+        y_predicted[i] = 'Blond_Hair'
+    elif rand == 3:
+        y_predicted[i] = 'Brown_Hair'
+    elif rand == 4:
+        y_predicted[i] = 'Gray_Hair'
+
+modelEvaluation.evaluate_model('baseline_validation', y_validate, y_predicted)
 for m in models_used.keys():
     y_predicted_validation = models_used[m].predict(x_validate)
     modelEvaluation.evaluate_model(m+'_validation', y_validate, y_predicted_validation)
